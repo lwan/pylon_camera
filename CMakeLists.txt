@@ -16,6 +16,7 @@ set(
      roslaunch
      sensor_msgs
      #std_srvs
+     nodelet
 )
 
 find_package(Pylon QUIET)
@@ -49,6 +50,7 @@ roslint_cpp(
     src/${PROJECT_NAME}/encoding_conversions.cpp
     src/${PROJECT_NAME}/main.cpp
     src/${PROJECT_NAME}/pylon_camera_node.cpp
+    src/${PROJECT_NAME}/pylon_camera_nodelet.cpp
     src/${PROJECT_NAME}/pylon_camera_parameter.cpp
     src/${PROJECT_NAME}/pylon_camera.cpp
     src/${PROJECT_NAME}/write_device_user_id_to_camera.cpp
@@ -79,6 +81,7 @@ add_library(
      src/${PROJECT_NAME}/encoding_conversions.cpp
      src/${PROJECT_NAME}/pylon_camera.cpp
      src/${PROJECT_NAME}/pylon_camera_node.cpp
+     src/${PROJECT_NAME}/pylon_camera_nodelet.cpp
      src/${PROJECT_NAME}/pylon_camera_parameter.cpp
 )
 
@@ -168,6 +171,13 @@ install(
     FILES_MATCHING PATTERN
      "*.h"
     PATTERN "internal" EXCLUDE
+)
+
+install(
+    FILES
+      nodelet_plugins.xml
+    DESTINATION
+      ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
 
 ## Testing ##

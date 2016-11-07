@@ -40,34 +40,33 @@ namespace pylon_camera
 using sensor_msgs::CameraInfo;
 using sensor_msgs::CameraInfoPtr;
 
-PylonCameraNode::PylonCameraNode()
-    : nh_("~"),
-      pylon_camera_parameter_set_(),
-      set_binning_srv_(nh_.advertiseService("set_binning",
+PylonCameraNode::PylonCameraNode(ros::NodeHandle &nh_private, ros::NodeHandle &nh_image)
+    : pylon_camera_parameter_set_(),
+      set_binning_srv_(nh_private.advertiseService("set_binning",
                                             &PylonCameraNode::setBinningCallback,
                                             this)),
-      set_exposure_srv_(nh_.advertiseService("set_exposure",
+      set_exposure_srv_(nh_private.advertiseService("set_exposure",
                                              &PylonCameraNode::setExposureCallback,
                                              this)),
-      set_gain_srv_(nh_.advertiseService("set_gain",
+      set_gain_srv_(nh_private.advertiseService("set_gain",
                                          &PylonCameraNode::setGainCallback,
                                          this)),
-      set_gamma_srv_(nh_.advertiseService("set_gamma",
+      set_gamma_srv_(nh_private.advertiseService("set_gamma",
                                           &PylonCameraNode::setGammaCallback,
                                           this)),
-      set_brightness_srv_(nh_.advertiseService("set_brightness",
+      set_brightness_srv_(nh_private.advertiseService("set_brightness",
                                                &PylonCameraNode::setBrightnessCallback,
                                                this)),
-      set_sleeping_srv_(nh_.advertiseService("set_sleeping",
+      set_sleeping_srv_(nh_private.advertiseService("set_sleeping",
                                              &PylonCameraNode::setSleepingCallback,
                                              this)),
       set_user_output_srvs_(),
       pylon_camera_(nullptr),
-      it_(new image_transport::ImageTransport(nh_)),
-      img_raw_pub_(it_->advertiseCamera("image_raw", 1)),
+      it_(new image_transport::ImageTransport(nh_image)),
+      img_raw_pub_(it_->advertiseCamera(nh_private.getNamespace() + "/image_raw", 1)),
       img_rect_pub_(nullptr),
       grab_imgs_raw_as_(
-              nh_,
+              nh_image,
               "grab_images_raw",
               boost::bind(&PylonCameraNode::grabImagesRawActionExecuteCB,
                           this,
@@ -76,11 +75,14 @@ PylonCameraNode::PylonCameraNode()
       grab_imgs_rect_as_(nullptr),
       pinhole_model_(nullptr),
       cv_bridge_img_rect_(nullptr),
-      camera_info_manager_(new camera_info_manager::CameraInfoManager(nh_)),
+      camera_info_manager_(new camera_info_manager::CameraInfoManager(nh_image)),
       sampling_indices_(),
       brightness_exp_lut_(),
       is_sleeping_(false)
 {
+    // Pointer to node handler
+    nh_private_ = &nh_private;
+    nh_image_ = &nh_image;
     init();
 }
 
@@ -91,7 +93,7 @@ void PylonCameraNode::init()
     // detected, the interface will reset them to the default values.
     // These parameters furthermore contain the intrinsic calibration matrices,
     // in case they are provided
-    pylon_camera_parameter_set_.readFromRosParameterServer(nh_);
+    pylon_camera_parameter_set_.readFromRosParameterServer(*nh_private_);
 
     // creating the target PylonCamera-Object with the specified
     // device_user_id, registering the Software-Trigger-Mode, starting the
@@ -108,6 +110,8 @@ void PylonCameraNode::init()
         ros::shutdown();
         return;
     }
+    // setup timer
+    grab_image_timer_ = nh_image_->createTimer(ros::Duration(1/frameRate()), &PylonCameraNode::spinCallback, this);
 }
 
 bool PylonCameraNode::initAndRegister()
@@ -174,7 +178,7 @@ bool PylonCameraNode::startGrabbing()
     for ( int i = 0; i < set_user_output_srvs_.size(); ++i )
     {
         std::string srv_name = "set_user_output_" + std::to_string(i);
-        set_user_output_srvs_.at(i) = nh_.advertiseService< camera_control_msgs::SetBool::Request,
+        set_user_output_srvs_.at(i) = nh_private_->advertiseService< camera_control_msgs::SetBool::Request,
                                                             camera_control_msgs::SetBool::Response >(
                                             srv_name,
                                             boost::bind(&PylonCameraNode::setUserOutputCB,
@@ -224,7 +228,7 @@ bool PylonCameraNode::startGrabbing()
          !camera_info_manager_->validateURL(pylon_camera_parameter_set_.cameraInfoURL()) )
     {
         ROS_INFO_STREAM("CameraInfoURL needed for rectification! ROS-Param: "
-            << "'" << nh_.getNamespace() << "/camera_info_url' = '"
+            << "'" << nh_private_->getNamespace() << "/camera_info_url' = '"
             << pylon_camera_parameter_set_.cameraInfoURL() << "' is invalid!");
         ROS_DEBUG_STREAM("CameraInfoURL should have following style: "
             << "'file:///full/path/to/local/file.yaml' or "
@@ -340,12 +344,12 @@ bool PylonCameraNode::startGrabbing()
                  pylon_camera_parameter_set_.frameRate(),
                  pylon_camera_->maxPossibleFramerate());
         pylon_camera_parameter_set_.setFrameRate(
-                nh_,
+                *nh_private_,
                 pylon_camera_->maxPossibleFramerate());
     }
     else if ( pylon_camera_parameter_set_.frameRate() == -1 )
     {
-        pylon_camera_parameter_set_.setFrameRate(nh_,
+        pylon_camera_parameter_set_.setFrameRate(*nh_private_,
                                                  pylon_camera_->maxPossibleFramerate());
         ROS_INFO("Max possible framerate is %.2f Hz",
                  pylon_camera_->maxPossibleFramerate());
@@ -356,10 +360,10 @@ bool PylonCameraNode::startGrabbing()
 void PylonCameraNode::setupRectification()
 {
     img_rect_pub_ =
-        new ros::Publisher(nh_.advertise<sensor_msgs::Image>("image_rect", 1));
+        new ros::Publisher(nh_image_->advertise<sensor_msgs::Image>(nh_private_->getNamespace() + "/image_rect", 1));
 
     grab_imgs_rect_as_ =
-        new GrabImagesAS(nh_,
+        new GrabImagesAS(*nh_image_,
                          "grab_images_rect",
                          boost::bind(
                             &PylonCameraNode::grabImagesRectActionExecuteCB,
@@ -376,7 +380,7 @@ void PylonCameraNode::setupRectification()
     cv_bridge_img_rect_->encoding = img_raw_msg_.encoding;
 }
 
-void PylonCameraNode::spin()
+void PylonCameraNode::spinCallback(const ros::TimerEvent& event)
 {
     if ( camera_info_manager_->isCalibrated() )
     {

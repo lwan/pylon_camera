@@ -40,22 +40,15 @@
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "pylon_camera_node");
+    ros::NodeHandle nh_private("~");
+    ros::NodeHandle nh_image;
 
-    pylon_camera::PylonCameraNode pylon_camera_node;
-
-    ros::Rate r(pylon_camera_node.frameRate());
+    pylon_camera::PylonCameraNode pylon_camera_node(nh_private, nh_image);
 
     ROS_INFO_STREAM("Start image grabbing if node connects to topic with "
         << "a frame_rate of: " << pylon_camera_node.frameRate() << " Hz");
 
-    // Main thread and brightness-service thread
-    boost::thread th(boost::bind(&ros::spin));
-
-    while ( ros::ok() )
-    {
-        pylon_camera_node.spin();
-        r.sleep();
-    }
+    ros::spin();
 
     ROS_INFO("Terminate PylonCameraNode");
     return EXIT_SUCCESS;
