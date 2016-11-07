@@ -28,6 +28,8 @@ The package opens either a predefined camera (using a given 'device_user_id' par
 
 The package supports running as nodelet.
 
+|
+
 ******
 **Installation**
 ******
