@@ -79,8 +79,10 @@ bool PylonGigECamera::applyCamSpecificStartupSettings(const PylonCameraParameter
          *    due to 50Hz lamps (-> 20ms cycle duration)
          *  - upper limit is to prevent motion blur
          */
+        double upper_lim = std::min(parameters.auto_exp_upper_lim_,
+                                    cam_->ExposureTimeAbs.GetMax());
         cam_->AutoExposureTimeAbsLowerLimit.SetValue(cam_->ExposureTimeAbs.GetMin());
-        cam_->AutoExposureTimeAbsUpperLimit.SetValue(cam_->ExposureTimeAbs.GetMax());
+        cam_->AutoExposureTimeAbsUpperLimit.SetValue(upper_lim);
 
         cam_->AutoGainRawLowerLimit.SetValue(cam_->GainRaw.GetMin());
         cam_->AutoGainRawUpperLimit.SetValue(cam_->GainRaw.GetMax());
@@ -113,11 +115,20 @@ bool PylonGigECamera::applyCamSpecificStartupSettings(const PylonCameraParameter
         ROS_INFO_STREAM("Cam has gain range: ["
                 << cam_->GainRaw.GetMin() << " - "
                 << cam_->GainRaw.GetMax()
-                << "] measured in decive specific units.");
+                << "] measured in device specific units.");
 
-        ROS_INFO_STREAM("Cam has gammma range: ["
+        // Check if gamma is available, print range
+        if ( !GenApi::IsAvailable(cam_->Gamma) )
+        {
+            ROS_WARN("Cam gamma not available, will keep the default (auto).");
+        }
+        else
+        {
+            ROS_INFO_STREAM("Cam has gammma range: ["
                 << cam_->Gamma.GetMin() << " - "
                 << cam_->Gamma.GetMax() << "].");
+        }
+
         ROS_INFO_STREAM("Cam has pylon auto brightness range: ["
                 << cam_->AutoTargetValue.GetMin() << " - "
                 << cam_->AutoTargetValue.GetMax()
@@ -210,6 +221,86 @@ GigECameraTrait::GainType& PylonGigECamera::gain()
     {
         throw std::runtime_error("Error while accessing GainRaw in PylonGigECamera");
     }
+}
+
+/**
+ * @override
+ * Overrides the base implementation as the Gamma object might not be available
+ * for some GigE color cameras when the 'AUTO GAMMA' is activated (see setGamma()).
+ *
+ * @returns -1 if Gamma is set to AUTO, returns gamma value if Gamma is set to USER.
+ */
+template <>
+float PylonGigECamera::currentGamma()
+{
+    if ( !GenApi::IsAvailable(cam_->Gamma) )
+    {
+        ROS_WARN_STREAM("Error while trying to access gamma: cam.Gamma NodeMap"
+                << " is not available!");
+        return -1.;
+    }
+    else
+    {
+        return static_cast<float>(gamma().GetValue());
+    }
+}
+
+template <>
+bool PylonGigECamera::setGamma(const float& target_gamma, float& reached_gamma)
+{
+    // for GigE cameras you have to enable gamma first
+    if ( GenApi::IsAvailable(cam_->GammaEnable) )
+    {
+        cam_->GammaEnable.SetValue(true);
+    }
+
+    if ( !GenApi::IsAvailable(cam_->Gamma) )
+    {
+        ROS_WARN_STREAM("Error while trying to set gamma: cam.Gamma NodeMap is"
+                << " not available!");
+        return true;
+    }
+
+    if ( GenApi::IsAvailable(cam_->GammaSelector) )
+    {
+        // set gamma selector to USER, so that the gamma value has an influence
+        try
+        {
+            cam_->GammaSelector.SetValue(Basler_GigECameraParams::GammaSelector_User);
+        }
+        catch ( const GenICam::GenericException &e )
+        {
+            ROS_ERROR_STREAM("An exception while setting gamma selector to"
+                    << " USER occurred: " << e.GetDescription());
+            return false;
+        }
+    }
+
+    try
+    {
+        float gamma_to_set = target_gamma;
+        if ( gamma().GetMin() > gamma_to_set )
+        {
+            gamma_to_set = gamma().GetMin();
+            ROS_WARN_STREAM("Desired gamma unreachable! Setting to lower limit: "
+                                  << gamma_to_set);
+        }
+        else if ( gamma().GetMax() < gamma_to_set )
+        {
+            gamma_to_set = gamma().GetMax();
+            ROS_WARN_STREAM("Desired gamma unreachable! Setting to upper limit: "
+                                  << gamma_to_set);
+        }
+        gamma().SetValue(gamma_to_set);
+        reached_gamma = currentGamma();
+    }
+    catch ( const GenICam::GenericException &e )
+    {
+        ROS_ERROR_STREAM("An exception while setting target gamma to "
+                << target_gamma << " occurred: " << e.GetDescription());
+        return false;
+    }
+    return true;
 }
 
 template <>

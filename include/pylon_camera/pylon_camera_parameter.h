@@ -207,7 +207,6 @@ public:
      * e.g. [50 - 205] for acA2500-14um and acA1920-40gm
      */
     bool brightness_continuous_;
-
     /**
      * Only relevant, if 'brightness' is given as ros-parameter:
      * If the camera should try to reach and / or keep the brightness, hence
@@ -222,6 +221,19 @@ public:
     bool exposure_auto_;
     bool gain_auto_;
     // #######################################################################
+
+    /**
+     * The timeout while searching the exposure which is connected to the
+     * desired brightness. For slow system this has to be increased.
+     */
+    double exposure_search_timeout_;
+
+    /**
+     * The exposure search can be limited with an upper bound. This is to
+     * prevent very high exposure times and resulting timeouts.
+     * A typical value for this upper bound is ~2000000us.
+     */
+    double auto_exp_upper_lim_;
 
     /**
      * The MTU size. Only used for GigE cameras.
