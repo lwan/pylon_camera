@@ -63,7 +63,7 @@ PylonCameraNode::PylonCameraNode(ros::NodeHandle &nh_private, ros::NodeHandle &n
       set_user_output_srvs_(),
       pylon_camera_(nullptr),
       it_(new image_transport::ImageTransport(nh_image)),
-      img_raw_pub_(it_->advertiseCamera(nh_private.getNamespace() + "/image_raw", 1)),
+      img_raw_pub_(it_->advertiseCamera("image_raw", 1)),
       img_rect_pub_(nullptr),
       grab_imgs_raw_as_(
               nh_image,
@@ -360,7 +360,7 @@ bool PylonCameraNode::startGrabbing()
 void PylonCameraNode::setupRectification()
 {
     img_rect_pub_ =
-        new ros::Publisher(nh_image_->advertise<sensor_msgs::Image>(nh_private_->getNamespace() + "/image_rect", 1));
+        new ros::Publisher(nh_image_->advertise<sensor_msgs::Image>("image_rect", 1));
 
     grab_imgs_rect_as_ =
         new GrabImagesAS(*nh_image_,
