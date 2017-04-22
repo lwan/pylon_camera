@@ -416,7 +416,8 @@ void PylonCameraNode::spinCallback(const ros::TimerEvent& event)
 
         if ( getNumSubscribersRect() > 0 )
         {
-            img_rect_pub_->publish(*cv_bridge_img_rect_);
+            // We use image_proc to do rectification -jdb
+            //img_rect_pub_->publish(*cv_bridge_img_rect_);
         }
     }
 }
