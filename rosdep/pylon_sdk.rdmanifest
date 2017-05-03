@@ -23,7 +23,7 @@ install-script: |
   fi
 
   pkg=pylon-${version}-${pkgarch}.tar.gz
-  url="http://s.baslerweb.com/media/documents/${pkg}"
+  url="https://www.baslerweb.com/media/downloads/software/pylon_software/${pkg}"
 
   wget --no-check-certificate -O $pkg $url
   tar xzvf $pkg
