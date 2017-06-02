@@ -27,7 +27,7 @@ install-script: |
 
   wget --no-check-certificate -O $pkg $url
   tar xzvf $pkg
-  cd pylon-${version}-${pkgarch}
+  cd pylon-*
   mkdir -p untarred
   tar xzvf pylonSDK-*.tar.gz -C untarred
 
