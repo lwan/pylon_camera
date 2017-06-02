@@ -29,7 +29,7 @@ install-script: |
   tar xzvf $pkg
   cd pylon-${version}-${pkgarch}
   mkdir -p untarred
-  tar xzvf pylonSDK-${version}-${pkgarch}.tar.gz -C untarred
+  tar xzvf pylonSDK-*.tar.gz -C untarred
 
   if [ "${PYLON_ROOT}" = "" ]; then
     sudo mv untarred/pylon5 /opt
