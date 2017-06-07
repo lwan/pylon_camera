@@ -127,6 +127,8 @@ public:
 
     virtual void enableContinuousAutoGain();
 
+    virtual void enableContinuousBalanceWhiteAuto();
+
     virtual std::string typeName() const;
 
     virtual float exposureStep();
@@ -141,6 +143,9 @@ protected:
     typedef typename CameraTraitT::GainType GainType;
     typedef typename CameraTraitT::ShutterModeEnums ShutterModeEnums;
     typedef typename CameraTraitT::UserOutputSelectorEnums UserOutputSelectorEnums;
+
+
+    typedef typename CameraTraitT::BalanceWhiteAutoEnums BalanceWhiteAutoEnums;
 
     CBaslerInstantCameraT* cam_;
 

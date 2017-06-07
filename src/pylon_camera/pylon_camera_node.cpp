@@ -327,6 +327,12 @@ bool PylonCameraNode::startGrabbing()
         }
     }
 
+    if (pylon_camera_parameter_set_.whitebalance_auto_ )
+    {
+        pylon_camera_->enableContinuousBalanceWhiteAuto();
+    }
+    
+
     ROS_INFO_STREAM("Startup settings: "
             << "encoding = '" << pylon_camera_->currentROSEncoding() << "', "
             << "binning = [" << pylon_camera_->currentBinningX() << ", "

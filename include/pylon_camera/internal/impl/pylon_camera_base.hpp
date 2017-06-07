@@ -233,6 +233,20 @@ void PylonCameraImpl<CameraTraitT>::enableContinuousAutoGain()
 }
 
 template <typename CameraTraitT>
+void PylonCameraImpl<CameraTraitT>::enableContinuousBalanceWhiteAuto()
+{
+    if ( GenApi::IsAvailable(cam_->BalanceWhiteAuto) )
+    {
+        cam_->BalanceWhiteAuto.SetValue(BalanceWhiteAutoEnums::BalanceWhiteAuto_Continuous);
+    }
+    else
+    {
+        ROS_ERROR_STREAM("Could not set BalanceWhiteAuto_Continuous mode");
+    }
+
+}
+
+template <typename CameraTraitT>
 void PylonCameraImpl<CameraTraitT>::disableAllRunningAutoBrightessFunctions()
 {
     is_binary_exposure_search_running_ = false;

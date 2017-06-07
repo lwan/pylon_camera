@@ -220,6 +220,7 @@ public:
      */
     bool exposure_auto_;
     bool gain_auto_;
+    bool whitebalance_auto_;
     // #######################################################################
 
     /**
