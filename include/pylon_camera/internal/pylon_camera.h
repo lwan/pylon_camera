@@ -127,7 +127,7 @@ public:
 
     virtual void enableContinuousAutoGain();
 
-    virtual void enableContinuousBalanceWhiteAuto();
+    virtual void enableOnceBalanceWhiteAuto();
 
     virtual std::string typeName() const;
 

@@ -93,11 +93,16 @@ void PylonCameraNode::init()
     // detected, the interface will reset them to the default values.
     // These parameters furthermore contain the intrinsic calibration matrices,
     // in case they are provided
+    
+    ROS_INFO_STREAM("Initializing parameters");
+
     pylon_camera_parameter_set_.readFromRosParameterServer(*nh_private_);
 
     // creating the target PylonCamera-Object with the specified
     // device_user_id, registering the Software-Trigger-Mode, starting the
     // communication with the device and enabling the desired startup-settings
+    
+
     if ( !initAndRegister() )
     {
         ros::shutdown();
@@ -327,11 +332,12 @@ bool PylonCameraNode::startGrabbing()
         }
     }
 
+    
     if (pylon_camera_parameter_set_.whitebalance_auto_ )
     {
-        pylon_camera_->enableContinuousBalanceWhiteAuto();
+        pylon_camera_->enableOnceBalanceWhiteAuto();
     }
-    
+     
 
     ROS_INFO_STREAM("Startup settings: "
             << "encoding = '" << pylon_camera_->currentROSEncoding() << "', "

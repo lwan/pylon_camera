@@ -208,11 +208,15 @@ void PylonCameraParameter::readFromRosParameterServer(const ros::NodeHandle& nh)
         }
     }
 
+
+    
     if ( nh.hasParam("whitebalance_auto") )
     {
         nh.getParam("whitebalance_auto", whitebalance_auto_);
         std::cout << "continuous auto white balance set" << std::endl;
     }
+    
+
     // ##########################
 
     nh.param<double>("exposure_search_timeout", exposure_search_timeout_, 5.);
