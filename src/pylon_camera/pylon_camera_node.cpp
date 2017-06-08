@@ -183,8 +183,25 @@ bool PylonCameraNode::initAndRegister()
 
 void PylonCameraNode::reconfigureCallback(pylon_camera::CameraSettingsConfig &config, uint32_t level)
 {
-    ROS_INFO_STREAM("RECONFIGURE CALLBACK" << config.whitebalance_auto);
-    pylon_camera_parameter_set_.whitebalance_auto_ = config.whitebalance_auto;
+    ROS_INFO_STREAM("SETTING CAMERA PARAMETERS"                            << std::endl << 
+                    "Exposure           "  << config.exposure              << std::endl <<
+                    "Gain               "  << config.gain                  << std::endl <<
+                    "Gamma              "  << config.gamma                 << std::endl <<
+                    "Brightness         "  << config.brightness            << std::endl <<
+                    "Autoexposure       "  << config.exposure_auto         << std::endl <<
+                    "Auto Brightness    "  << config.brightness_continuous << std::endl <<
+                    "Auto Gain          "  << config.gain_auto             << std::endl <<
+                    "Auto White Balance "  << config.whitebalance_auto     << std::endl                
+                    );
+
+    pylon_camera_parameter_set_.exposure_              = config.exposure;
+    pylon_camera_parameter_set_.gain_                  = config.gain;
+    pylon_camera_parameter_set_.gamma_                 = config.gamma;
+    pylon_camera_parameter_set_.brightness_            = config.brightness;
+    pylon_camera_parameter_set_.exposure_auto_         = config.exposure_auto;
+    pylon_camera_parameter_set_.brightness_continuous_ = config.brightness;
+    pylon_camera_parameter_set_.gain_auto_             = config.gain_auto;
+    pylon_camera_parameter_set_.whitebalance_auto_     = config.whitebalance_auto;   
 
     if ( camera_initialized_ )
     {
@@ -201,28 +218,17 @@ bool PylonCameraNode::initGrabbing()
         return false;
     }
 
-    if ( !PylonCameraNode::setParams() )
-    {
-        return false;
-    }
-    camera_initialized_ = true;
-    return true;
-}
-
-bool PylonCameraNode::setParams()
-{
     set_user_output_srvs_.resize(pylon_camera_->numUserOutputs());
     for ( int i = 0; i < set_user_output_srvs_.size(); ++i )
     {
         std::string srv_name = "set_user_output_" + std::to_string(i);
-        set_user_output_srvs_.at(i) = nh_private_->advertiseService< camera_control_msgs::SetBool::Request,
-                                                            camera_control_msgs::SetBool::Response >(
-                                            srv_name,
-                                            boost::bind(&PylonCameraNode::setUserOutputCB,
-                                                        this,
-                                                        i,
-                                                        _1,
-                                                        _2));
+        set_user_output_srvs_.at(i) = nh_private_->advertiseService< camera_control_msgs::SetBool::Request, 
+                                                                     camera_control_msgs::SetBool::Response >( 
+                                                                                srv_name, boost::bind(&PylonCameraNode::setUserOutputCB,
+                                                                                                      this,
+                                                                                                      i,
+                                                                                                      _1,
+                                                                                                      _2));
     }
 
     img_raw_msg_.header.frame_id = pylon_camera_parameter_set_.cameraFrame();
@@ -291,6 +297,16 @@ bool PylonCameraNode::setParams()
         }
     }
 
+    if ( !PylonCameraNode::setParams() )
+    {
+        return false;
+    }
+    camera_initialized_ = true;
+    return true;
+}
+
+bool PylonCameraNode::setParams()
+{
     if ( pylon_camera_parameter_set_.binning_x_given_ )
     {
         size_t reached_binning_x;
@@ -371,15 +387,15 @@ bool PylonCameraNode::setParams()
     }
      
 
-    ROS_INFO_STREAM("Startup settings: "
+    ROS_INFO_STREAM("Loaded settings: "
             << "encoding = '" << pylon_camera_->currentROSEncoding() << "', "
             << "binning = [" << pylon_camera_->currentBinningX() << ", "
             << pylon_camera_->currentBinningY() << "], "
             << "exposure = " << pylon_camera_->currentExposure() << ", "
             << "gain = " << pylon_camera_->currentGain() << ", "
             << "gamma = " <<  pylon_camera_->currentGamma() << ", "
-            << "shutter mode = "
-            << pylon_camera_parameter_set_.shutterModeString());
+            << "shutter mode = " << pylon_camera_parameter_set_.shutterModeString() << ", "
+            << "auto white balance mode = " << pylon_camera_parameter_set_.whitebalance_auto_ );
 
     // Framerate Settings
     if ( pylon_camera_->maxPossibleFramerate() < pylon_camera_parameter_set_.frameRate() )
