@@ -114,6 +114,18 @@ protected:
     bool startGrabbing();
 
     /**
+    * Initialize camera, set initial parameters
+    *
+    */
+    bool initGrabbing();
+
+    /**
+    * Set parameters
+    *
+    */
+    bool setParams();
+
+    /**
      * Initializing of img_rect_pub_, grab_img_rect_as_ and the pinhole_model_,
      * in case that a vaid camera info has been set
      * @return
@@ -364,6 +376,8 @@ protected:
 
     bool is_sleeping_;
     boost::recursive_mutex grab_mutex_;
+
+    bool camera_initialized_;
 };
 
 }  // namespace pylon_camera

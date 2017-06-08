@@ -81,7 +81,8 @@ PylonCameraNode::PylonCameraNode(ros::NodeHandle &nh_private, ros::NodeHandle &n
       camera_info_manager_(new camera_info_manager::CameraInfoManager(nh_image)),
       sampling_indices_(),
       brightness_exp_lut_(),
-      is_sleeping_(false)
+      is_sleeping_(false),
+      camera_initialized_(false)
 {
     // Pointer to node handler
     nh_private_ = &nh_private;
@@ -119,7 +120,7 @@ void PylonCameraNode::init()
     }
 
     // starting the grabbing procedure with the desired image-settings
-    if ( !startGrabbing() )
+    if ( !initGrabbing() )
     {
         ros::shutdown();
         return;
@@ -185,9 +186,14 @@ void PylonCameraNode::reconfigureCallback(pylon_camera::CameraSettingsConfig &co
     ROS_INFO_STREAM("RECONFIGURE CALLBACK" << config.whitebalance_auto);
     pylon_camera_parameter_set_.whitebalance_auto_ = config.whitebalance_auto;
 
+    if ( camera_initialized_ )
+    {
+        PylonCameraNode::setParams();    
+    }
 }
 
-bool PylonCameraNode::startGrabbing()
+
+bool PylonCameraNode::initGrabbing()
 {
     if ( !pylon_camera_->startGrabbing(pylon_camera_parameter_set_) )
     {
@@ -195,6 +201,16 @@ bool PylonCameraNode::startGrabbing()
         return false;
     }
 
+    if ( !PylonCameraNode::setParams() )
+    {
+        return false;
+    }
+    camera_initialized_ = true;
+    return true;
+}
+
+bool PylonCameraNode::setParams()
+{
     set_user_output_srvs_.resize(pylon_camera_->numUserOutputs());
     for ( int i = 0; i < set_user_output_srvs_.size(); ++i )
     {
