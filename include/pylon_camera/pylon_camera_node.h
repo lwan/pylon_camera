@@ -40,9 +40,11 @@
 #include <image_transport/image_transport.h>
 #include <sensor_msgs/CameraInfo.h>
 #include <sensor_msgs/image_encodings.h>
+#include <dynamic_reconfigure/server.h>
 
 #include <pylon_camera/pylon_camera_parameter.h>
 #include <pylon_camera/pylon_camera.h>
+#include <pylon_camera/CameraSettingsConfig.h>
 
 #include <camera_control_msgs/SetBool.h>
 #include <camera_control_msgs/SetBinning.h>
@@ -90,6 +92,13 @@ public:
      * @return the camera frame.
      */
     const std::string& cameraFrame() const;
+
+    /**
+    * Callback for dynamic reconfigure parameters
+    */
+    void reconfigureCallback(pylon_camera::CameraSettingsConfig &config, 
+                            uint32_t level);
+
 
 protected:
     /**
@@ -317,6 +326,7 @@ protected:
      */
     bool waitForCamera(const ros::Duration& timeout) const;
 
+
     ros::NodeHandle* nh_private_;
     ros::NodeHandle* nh_image_;
     ros::Timer grab_image_timer_;
@@ -328,6 +338,9 @@ protected:
     ros::ServiceServer set_gamma_srv_;
     ros::ServiceServer set_brightness_srv_;
     ros::ServiceServer set_sleeping_srv_;
+
+    dynamic_reconfigure::Server<pylon_camera::CameraSettingsConfig> cam_settings_server;
+
     std::vector<ros::ServiceServer> set_user_output_srvs_;
 
     PylonCamera* pylon_camera_;

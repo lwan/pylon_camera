@@ -35,19 +35,34 @@
 #include <ros/ros.h>
 #include <boost/thread.hpp>
 #include <pylon_camera/pylon_camera_node.h>
+#include <pylon_camera/CameraSettingsConfig.h>
+
+void callback(pylon_camera::CameraSettingsConfig &config, uint32_t level) {
+	ROS_INFO_STREAM("dynamic_reconfigure callback");
+}
 
 
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "pylon_camera_node");
+
+
     ros::NodeHandle nh_private("~");
     ros::NodeHandle nh_image;
+
+	dynamic_reconfigure::Server<pylon_camera::CameraSettingsConfig> server;
+    dynamic_reconfigure::Server<pylon_camera::CameraSettingsConfig>::CallbackType f;
+
+    //f = boost::bind(&pylon_camera::PylonCameraNode::reconfigureCallback, _1, _2);
+    f = boost::bind(&callback, _1, _2);
+	server.setCallback(f);
 
     pylon_camera::PylonCameraNode pylon_camera_node(nh_private, nh_image);
 
     ROS_INFO_STREAM("Start image grabbing if node connects to topic with "
         << "a frame_rate of: " << pylon_camera_node.frameRate() << " Hz");
-
+   
+ 	
     ros::spin();
 
     ROS_INFO("Terminate PylonCameraNode");

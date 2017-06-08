@@ -326,7 +326,7 @@ public:
     /**
     * Enables continuous auto white balance mode
     */
-    virtual void enableOnceBalanceWhiteAuto() = 0;
+    virtual bool setBalanceWhiteAuto( bool balance_white_enable ) = 0;
 
 
     /**

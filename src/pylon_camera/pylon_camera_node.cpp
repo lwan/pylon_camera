@@ -34,6 +34,7 @@
 #include <vector>
 #include "boost/multi_array.hpp"
 
+
 namespace pylon_camera
 {
 
@@ -60,6 +61,8 @@ PylonCameraNode::PylonCameraNode(ros::NodeHandle &nh_private, ros::NodeHandle &n
       set_sleeping_srv_(nh_private.advertiseService("set_sleeping",
                                              &PylonCameraNode::setSleepingCallback,
                                              this)),
+      cam_settings_server(nh_private),
+
       set_user_output_srvs_(),
       pylon_camera_(nullptr),
       it_(new image_transport::ImageTransport(nh_image)),
@@ -83,6 +86,12 @@ PylonCameraNode::PylonCameraNode(ros::NodeHandle &nh_private, ros::NodeHandle &n
     // Pointer to node handler
     nh_private_ = &nh_private;
     nh_image_ = &nh_image;
+    
+    // Dynamic reconfigure initialization
+    dynamic_reconfigure::Server<pylon_camera::CameraSettingsConfig>::CallbackType f;
+    f = boost::bind(&PylonCameraNode::reconfigureCallback, this, _1 , _2);
+    cam_settings_server.setCallback(f);
+
     init();
 }
 
@@ -169,6 +178,13 @@ bool PylonCameraNode::initAndRegister()
     }
 
     return true;
+}
+
+void PylonCameraNode::reconfigureCallback(pylon_camera::CameraSettingsConfig &config, uint32_t level)
+{
+    ROS_INFO_STREAM("RECONFIGURE CALLBACK" << config.whitebalance_auto);
+    pylon_camera_parameter_set_.whitebalance_auto_ = config.whitebalance_auto;
+
 }
 
 bool PylonCameraNode::startGrabbing()
@@ -335,7 +351,7 @@ bool PylonCameraNode::startGrabbing()
     
     if (pylon_camera_parameter_set_.whitebalance_auto_ )
     {
-        pylon_camera_->enableOnceBalanceWhiteAuto();
+        pylon_camera_->setBalanceWhiteAuto( pylon_camera_parameter_set_.whitebalance_auto_ );
     }
      
 
@@ -1507,6 +1523,7 @@ float PylonCameraNode::calcCurrentBrightness()
     }
     return sum;
 }
+
 
 bool PylonCameraNode::setSleepingCallback(camera_control_msgs::SetSleeping::Request &req,
                                           camera_control_msgs::SetSleeping::Response &res)
