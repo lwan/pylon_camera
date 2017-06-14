@@ -42,24 +42,7 @@ using sensor_msgs::CameraInfoPtr;
 
 PylonCameraNode::PylonCameraNode(ros::NodeHandle &nh_private, ros::NodeHandle &nh_image)
     : pylon_camera_parameter_set_(),
-      set_binning_srv_(nh_private.advertiseService("set_binning",
-                                            &PylonCameraNode::setBinningCallback,
-                                            this)),
-      set_exposure_srv_(nh_private.advertiseService("set_exposure",
-                                             &PylonCameraNode::setExposureCallback,
-                                             this)),
-      set_gain_srv_(nh_private.advertiseService("set_gain",
-                                         &PylonCameraNode::setGainCallback,
-                                         this)),
-      set_gamma_srv_(nh_private.advertiseService("set_gamma",
-                                          &PylonCameraNode::setGammaCallback,
-                                          this)),
-      set_brightness_srv_(nh_private.advertiseService("set_brightness",
-                                               &PylonCameraNode::setBrightnessCallback,
-                                               this)),
-      set_sleeping_srv_(nh_private.advertiseService("set_sleeping",
-                                             &PylonCameraNode::setSleepingCallback,
-                                             this)),
+      cam_settings_server(nh_private), 
       set_user_output_srvs_(),
       pylon_camera_(nullptr),
       it_(new image_transport::ImageTransport(nh_image)),
@@ -78,11 +61,18 @@ PylonCameraNode::PylonCameraNode(ros::NodeHandle &nh_private, ros::NodeHandle &n
       camera_info_manager_(new camera_info_manager::CameraInfoManager(nh_image)),
       sampling_indices_(),
       brightness_exp_lut_(),
-      is_sleeping_(false)
+      is_sleeping_(false),
+      camera_initialized_(false)
 {
     // Pointer to node handler
     nh_private_ = &nh_private;
     nh_image_ = &nh_image;
+    
+    // Dynamic reconfigure initialization
+    dynamic_reconfigure::Server<pylon_camera::CameraSettingsConfig>::CallbackType f;
+    f = boost::bind(&PylonCameraNode::reconfigureCallback, this, _1 , _2);
+    cam_settings_server.setCallback(f);
+
     init();
 }
 
@@ -93,11 +83,16 @@ void PylonCameraNode::init()
     // detected, the interface will reset them to the default values.
     // These parameters furthermore contain the intrinsic calibration matrices,
     // in case they are provided
+    
+    ROS_INFO_STREAM("Initializing parameters");
+
     pylon_camera_parameter_set_.readFromRosParameterServer(*nh_private_);
 
     // creating the target PylonCamera-Object with the specified
     // device_user_id, registering the Software-Trigger-Mode, starting the
     // communication with the device and enabling the desired startup-settings
+    
+
     if ( !initAndRegister() )
     {
         ros::shutdown();
@@ -105,7 +100,7 @@ void PylonCameraNode::init()
     }
 
     // starting the grabbing procedure with the desired image-settings
-    if ( !startGrabbing() )
+    if ( !initGrabbing() )
     {
         ros::shutdown();
         return;
@@ -118,6 +113,8 @@ bool PylonCameraNode::initAndRegister()
 {
     pylon_camera_ = PylonCamera::create(
                                     pylon_camera_parameter_set_.deviceUserID());
+
+    ROS_INFO_STREAM("deviceUserID " << pylon_camera_parameter_set_.deviceUserID());
 
     if ( pylon_camera_ == nullptr )
     {
@@ -166,7 +163,28 @@ bool PylonCameraNode::initAndRegister()
     return true;
 }
 
-bool PylonCameraNode::startGrabbing()
+void PylonCameraNode::reconfigureCallback(pylon_camera::CameraSettingsConfig &config, uint32_t level)
+{
+    ROS_INFO_STREAM("SETTING CAMERA PARAMETERS"                            << std::endl << 
+                    "Exposure           "  << config.exposure              << std::endl <<
+                    "Gain               "  << config.gain                  << std::endl <<
+                    "Gamma              "  << config.gamma                 << std::endl <<
+                    "Brightness         "  << config.brightness            << std::endl <<
+                    "Autoexposure       "  << config.exposure_auto         << std::endl <<
+                    "Auto Brightness    "  << config.brightness_continuous << std::endl <<
+                    "Auto Gain          "  << config.gain_auto             << std::endl <<
+                    "Auto White Balance "  << config.whitebalance_auto     << std::endl                
+                    );
+
+    config_ = config;
+    if ( camera_initialized_ )
+    {
+        config = PylonCameraNode::setParams(config_);    
+    }
+}
+
+
+bool PylonCameraNode::initGrabbing()
 {
     if ( !pylon_camera_->startGrabbing(pylon_camera_parameter_set_) )
     {
@@ -178,14 +196,13 @@ bool PylonCameraNode::startGrabbing()
     for ( int i = 0; i < set_user_output_srvs_.size(); ++i )
     {
         std::string srv_name = "set_user_output_" + std::to_string(i);
-        set_user_output_srvs_.at(i) = nh_private_->advertiseService< camera_control_msgs::SetBool::Request,
-                                                            camera_control_msgs::SetBool::Response >(
-                                            srv_name,
-                                            boost::bind(&PylonCameraNode::setUserOutputCB,
-                                                        this,
-                                                        i,
-                                                        _1,
-                                                        _2));
+        set_user_output_srvs_.at(i) = nh_private_->advertiseService< camera_control_msgs::SetBool::Request, 
+                                                                     camera_control_msgs::SetBool::Response >( 
+                                                                                srv_name, boost::bind(&PylonCameraNode::setUserOutputCB,
+                                                                                                      this,
+                                                                                                      i,
+                                                                                                      _1,
+                                                                                                      _2));
     }
 
     img_raw_msg_.header.frame_id = pylon_camera_parameter_set_.cameraFrame();
@@ -209,7 +226,7 @@ bool PylonCameraNode::startGrabbing()
                                     static_cast<float>(pylon_camera_parameter_set_.downsampling_factor_exp_search_);
     cv::Point2i start_pt(0, 0);
     cv::Point2i end_pt(pylon_camera_->imageCols(), pylon_camera_->imageRows());
-    // add the iamge center point only once
+    // add the image center point only once
     sampling_indices_.push_back(0.5 * pylon_camera_->imageRows() * pylon_camera_->imageCols());
     genSamplingIndices(sampling_indices_,
                        min_window_height,
@@ -254,6 +271,32 @@ bool PylonCameraNode::startGrabbing()
         }
     }
 
+    PylonCameraNode::setParams(config_); // dynamic reconfigure callback called at beginning, so paras are set
+
+    camera_initialized_ = true;
+    return true;
+}
+
+
+void PylonCameraNode::convertConfigParams(pylon_camera::CameraSettingsConfig &config)
+{
+    pylon_camera_parameter_set_.exposure_              = config.exposure;
+    pylon_camera_parameter_set_.gain_                  = config.gain;
+    pylon_camera_parameter_set_.gamma_                 = config.gamma;
+    pylon_camera_parameter_set_.brightness_            = config.brightness;
+    pylon_camera_parameter_set_.exposure_auto_         = config.exposure_auto;
+    pylon_camera_parameter_set_.brightness_continuous_ = config.brightness;
+    pylon_camera_parameter_set_.gain_auto_             = config.gain_auto;
+    pylon_camera_parameter_set_.whitebalance_auto_     = config.whitebalance_auto;  
+}
+
+
+
+pylon_camera::CameraSettingsConfig PylonCameraNode::setParams(pylon_camera::CameraSettingsConfig config)
+{
+
+    convertConfigParams(config);
+
     if ( pylon_camera_parameter_set_.binning_x_given_ )
     {
         size_t reached_binning_x;
@@ -281,6 +324,7 @@ bool PylonCameraNode::startGrabbing()
         ROS_INFO_STREAM("Setting exposure to "
                 << pylon_camera_parameter_set_.exposure_ << ", reached: "
                 << reached_exposure);
+        config.exposure = reached_exposure;
     }
 
     if ( pylon_camera_parameter_set_.gain_given_ )
@@ -290,6 +334,7 @@ bool PylonCameraNode::startGrabbing()
         ROS_INFO_STREAM("Setting gain to: "
                 << pylon_camera_parameter_set_.gain_ << ", reached: "
                 << reached_gain);
+        config.gain = reached_gain;
     }
 
     if ( pylon_camera_parameter_set_.gamma_given_ )
@@ -298,6 +343,7 @@ bool PylonCameraNode::startGrabbing()
         setGamma(pylon_camera_parameter_set_.gamma_, reached_gamma);
         ROS_INFO_STREAM("Setting gamma to " << pylon_camera_parameter_set_.gamma_
                 << ", reached: " << reached_gamma);
+        config.gamma = reached_gamma;
     }
 
     if ( pylon_camera_parameter_set_.brightness_given_ )
@@ -325,17 +371,24 @@ bool PylonCameraNode::startGrabbing()
         {
             pylon_camera_->disableAllRunningAutoBrightessFunctions();
         }
+        config.brightness = reached_brightness;
     }
 
-    ROS_INFO_STREAM("Startup settings: "
+    
+    if (pylon_camera_parameter_set_.whitebalance_auto_ )
+    {
+        pylon_camera_->setBalanceWhiteAuto( pylon_camera_parameter_set_.whitebalance_auto_ );
+    }
+
+    ROS_INFO_STREAM("Loaded settings: "
             << "encoding = '" << pylon_camera_->currentROSEncoding() << "', "
             << "binning = [" << pylon_camera_->currentBinningX() << ", "
             << pylon_camera_->currentBinningY() << "], "
             << "exposure = " << pylon_camera_->currentExposure() << ", "
             << "gain = " << pylon_camera_->currentGain() << ", "
             << "gamma = " <<  pylon_camera_->currentGamma() << ", "
-            << "shutter mode = "
-            << pylon_camera_parameter_set_.shutterModeString());
+            << "shutter mode = " << pylon_camera_parameter_set_.shutterModeString() << ", "
+            << "auto white balance mode = " << pylon_camera_parameter_set_.whitebalance_auto_ );
 
     // Framerate Settings
     if ( pylon_camera_->maxPossibleFramerate() < pylon_camera_parameter_set_.frameRate() )
@@ -354,7 +407,7 @@ bool PylonCameraNode::startGrabbing()
         ROS_INFO("Max possible framerate is %.2f Hz",
                  pylon_camera_->maxPossibleFramerate());
     }
-    return true;
+    return config;
 }
 
 void PylonCameraNode::setupRectification()
@@ -1033,20 +1086,6 @@ bool PylonCameraNode::setBinningY(const size_t& target_binning_y,
     return true;
 }
 
-bool PylonCameraNode::setBinningCallback(camera_control_msgs::SetBinning::Request &req,
-                                         camera_control_msgs::SetBinning::Response &res)
-{
-    size_t reached_binning_x, reached_binning_y;
-    bool success_x = setBinningX(req.target_binning_x,
-                                 reached_binning_x);
-    bool success_y = setBinningY(req.target_binning_y,
-                                 reached_binning_y);
-    res.reached_binning_x = static_cast<uint32_t>(reached_binning_x);
-    res.reached_binning_y = static_cast<uint32_t>(reached_binning_y);
-    res.success = success_x && success_y;
-    return true;
-}
-
 bool PylonCameraNode::setExposure(const float& target_exposure,
                                   float& reached_exposure)
 {
@@ -1087,13 +1126,6 @@ bool PylonCameraNode::setExposure(const float& target_exposure,
     }
 }
 
-bool PylonCameraNode::setExposureCallback(camera_control_msgs::SetExposure::Request &req,
-                                          camera_control_msgs::SetExposure::Response &res)
-{
-    res.success = setExposure(req.target_exposure, res.reached_exposure);
-    return true;
-}
-
 bool PylonCameraNode::setGain(const float& target_gain, float& reached_gain)
 {
     boost::lock_guard<boost::recursive_mutex> lock(grab_mutex_);
@@ -1131,13 +1163,6 @@ bool PylonCameraNode::setGain(const float& target_gain, float& reached_gain)
      }
 }
 
-bool PylonCameraNode::setGainCallback(camera_control_msgs::SetGain::Request &req,
-                                      camera_control_msgs::SetGain::Response &res)
-{
-    res.success = setGain(req.target_gain, res.reached_gain);
-    return true;
-}
-
 bool PylonCameraNode::setGamma(const float& target_gamma, float& reached_gamma)
 {
     boost::lock_guard<boost::recursive_mutex> lock(grab_mutex_);
@@ -1173,13 +1198,6 @@ bool PylonCameraNode::setGamma(const float& target_gamma, float& reached_gamma)
             << "gamma before timeout");
         return false;
     }
-}
-
-bool PylonCameraNode::setGammaCallback(camera_control_msgs::SetGamma::Request &req,
-                                       camera_control_msgs::SetGamma::Response &res)
-{
-    res.success = setGamma(req.target_gamma, res.reached_gamma);
-    return true;
 }
 
 bool PylonCameraNode::setBrightness(const int& target_brightness,
@@ -1404,29 +1422,6 @@ bool PylonCameraNode::setBrightness(const int& target_brightness,
     return is_brightness_reached;
 }
 
-bool PylonCameraNode::setBrightnessCallback(camera_control_msgs::SetBrightness::Request &req,
-                                            camera_control_msgs::SetBrightness::Response &res)
-{
-    res.success = setBrightness(req.target_brightness,
-                                res.reached_brightness,
-                                req.exposure_auto,
-                                req.gain_auto);
-    if ( req.brightness_continuous )
-    {
-        if ( req.exposure_auto )
-        {
-            pylon_camera_->enableContinuousAutoExposure();
-        }
-        if ( req.gain_auto )
-        {
-            pylon_camera_->enableContinuousAutoGain();
-        }
-    }
-    res.reached_exposure_time = pylon_camera_->currentExposure();
-    res.reached_gain_value = pylon_camera_->currentGain();
-    return true;
-}
-
 void PylonCameraNode::genSamplingIndices(std::vector<std::size_t>& indices,
                                          const std::size_t& min_window_height,
                                          const cv::Point2i& s,   // start
@@ -1494,24 +1489,6 @@ float PylonCameraNode::calcCurrentBrightness()
         }
     }
     return sum;
-}
-
-bool PylonCameraNode::setSleepingCallback(camera_control_msgs::SetSleeping::Request &req,
-                                          camera_control_msgs::SetSleeping::Response &res)
-{
-    is_sleeping_ = req.set_sleeping;
-
-    if ( is_sleeping_ )
-    {
-        ROS_INFO("Seting Pylon Camera Node to sleep...");
-    }
-    else
-    {
-        ROS_INFO("Pylon Camera Node continues grabbing");
-    }
-
-    res.success = true;
-    return true;
 }
 
 bool PylonCameraNode::isSleeping()

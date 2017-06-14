@@ -15,21 +15,27 @@ set(
      roscpp
      roslaunch
      sensor_msgs
-     #std_srvs
      nodelet
+     dynamic_reconfigure
+     roslint
 )
 
 find_package(Pylon QUIET)
 if (NOT ${Pylon_FOUND})
     include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindPylon.cmake")
 endif()
+
 find_package(
     catkin REQUIRED
     COMPONENTS
      ${CATKIN_COMPONENTS}
-     #std_srvs
-     roslint
 )
+
+catkin_python_setup()
+generate_dynamic_reconfigure_options(
+  cfg/CameraSettings.cfg
+)
+
 
 catkin_package(
     INCLUDE_DIRS
@@ -123,7 +129,10 @@ add_dependencies(
      ${catkin_EXPORTED_TARGETS}
 )
 
-catkin_python_setup()
+add_dependencies(
+    ${PROJECT_NAME}_node
+    ${PROJECT_NAME}_gencfg 
+)
 
 install(
     DIRECTORY

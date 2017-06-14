@@ -53,6 +53,8 @@ struct GigECameraTrait
     typedef Basler_GigECameraParams::ShutterModeEnums ShutterModeEnums;
     typedef Basler_GigECamera::UserOutputSelectorEnums UserOutputSelectorEnums;
 
+    typedef Basler_GigECameraParams::BalanceWhiteAutoEnums BalanceWhiteAutoEnums;
+
     static inline AutoTargetBrightnessValueType convertBrightness(const int& value)
     {
         return value;

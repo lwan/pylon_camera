@@ -322,6 +322,13 @@ public:
      */
     virtual void enableContinuousAutoGain() = 0;
 
+
+    /**
+    * Enables continuous auto white balance mode
+    */
+    virtual bool setBalanceWhiteAuto( bool balance_white_enable ) = 0;
+
+
     /**
      * Get the camera type. Currently supported cameras are USB, DART and GigE
      * @return camera type as string
