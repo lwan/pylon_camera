@@ -69,6 +69,11 @@ public:
     const std::string& deviceUserID() const;
 
     /**
+    * Getter for camera_serial_ set from ros-parameter server
+    */
+    const std::string& cameraSerial() const;
+
+    /**
      * Getter for the string describing the shutter mode
      */
     std::string shutterModeString() const;
@@ -305,6 +310,12 @@ protected:
      * 'bayer_gbrg8', 'bayer_rggb8' and 'yuv422'
      */
     std::string image_encoding_;
+
+    /**
+    * Unique serial number for camera identification
+    */
+    std::string camera_serial_;
+
 };
 
 }  // namespace pylon_camera

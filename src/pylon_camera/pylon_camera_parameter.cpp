@@ -56,7 +56,7 @@ PylonCameraParameter::~PylonCameraParameter()
 
 void PylonCameraParameter::readFromRosParameterServer(const ros::NodeHandle& nh)
 {
-    ROS_INFO_STREAM("Reading parameters from parameter server"); //probably don't need to do these anymore
+    ROS_INFO_STREAM("Reading parameters from parameter server"); 
 
     nh.param<std::string>("camera_frame", camera_frame_, "pylon_camera");
 
@@ -72,6 +72,13 @@ void PylonCameraParameter::readFromRosParameterServer(const ros::NodeHandle& nh)
     {
         nh.getParam("camera_info_url", camera_info_url_);
     }
+
+    nh.param<std::string>("camera_serial", camera_serial_, "");
+    if ( nh.hasParam("camera_serial") )
+    {
+        nh.getParam("camera_serial", camera_serial_);
+    }
+
 
     binning_x_given_ = nh.hasParam("binning_x");
     if ( binning_x_given_ )
@@ -294,6 +301,11 @@ void PylonCameraParameter::validateParameterSet(const ros::NodeHandle& nh)
 const std::string& PylonCameraParameter::deviceUserID() const
 {
     return device_user_id_;
+}
+
+const std::string& PylonCameraParameter::cameraSerial() const
+{
+    return camera_serial_;
 }
 
 std::string PylonCameraParameter::shutterModeString() const
