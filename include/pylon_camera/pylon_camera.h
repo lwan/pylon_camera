@@ -323,6 +323,15 @@ public:
     virtual void enableContinuousAutoGain() = 0;
 
 
+    virtual void setTriggerMode(std::string mode) = 0;
+
+    virtual void setTriggerSource(std::string source) = 0;
+
+    virtual void setLineSelector(std::string line) = 0;
+
+    virtual void setLineSource(std::string source) = 0;
+
+    virtual void setLineMode(std::string mode) = 0;
     /**
     * Enables continuous auto white balance mode
     */

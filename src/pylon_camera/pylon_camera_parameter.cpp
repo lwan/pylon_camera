@@ -46,8 +46,8 @@ PylonCameraParameter::PylonCameraParameter() :
         downsampling_factor_exp_search_(1),
         exposure_search_timeout_(5.),
         auto_exp_upper_lim_(0.0),
-        mtu_size_(1500),
-        inter_pkg_delay_(1000),
+        mtu_size_(8192),
+        inter_pkg_delay_(0),
         shutter_mode_(SM_GLOBAL)
 {}
 
@@ -241,6 +241,9 @@ void PylonCameraParameter::readFromRosParameterServer(const ros::NodeHandle& nh)
     {
         shutter_mode_ = SM_DEFAULT;
     }
+
+    // Check for hardware sync params
+    // Note -- camera with name "right" is automcatically selected as sync master
 
     validateParameterSet(nh);
     return;

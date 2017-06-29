@@ -129,6 +129,16 @@ public:
 
     virtual bool setBalanceWhiteAuto( bool balance_white_enable );
 
+    virtual void setTriggerMode(std::string mode);
+    
+    virtual void setTriggerSource(std::string source);
+    
+    virtual void setLineSelector(std::string line);
+    
+    virtual void setLineSource(std::string source);
+    
+    virtual void setLineMode(std::string mode);
+    
     virtual std::string typeName() const;
 
     virtual float exposureStep();
@@ -143,7 +153,11 @@ protected:
     typedef typename CameraTraitT::GainType GainType;
     typedef typename CameraTraitT::ShutterModeEnums ShutterModeEnums;
     typedef typename CameraTraitT::UserOutputSelectorEnums UserOutputSelectorEnums;
-
+    typedef typename CameraTraitT::TriggerModeEnums TriggerModeEnums;
+    typedef typename CameraTraitT::TriggerSourceEnums TriggerSourceEnums;
+    typedef typename CameraTraitT::LineSelectorEnums LineSelectorEnums;
+    typedef typename CameraTraitT::LineSourceEnums LineSourceEnums;
+    typedef typename CameraTraitT::LineModeEnums LineModeEnums;
 
     typedef typename CameraTraitT::BalanceWhiteAutoEnums BalanceWhiteAutoEnums;
 

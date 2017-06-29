@@ -47,6 +47,11 @@ struct GigECameraTrait
     typedef Basler_GigECameraParams::GainAutoEnums GainAutoEnums;
     typedef Basler_GigECameraParams::PixelFormatEnums PixelFormatEnums;
     typedef Basler_GigECameraParams::PixelSizeEnums PixelSizeEnums;
+    typedef Basler_GigECameraParams::TriggerModeEnums TriggerModeEnums;
+    typedef Basler_GigECameraParams::TriggerSourceEnums TriggerSourceEnums;
+    typedef Basler_GigECameraParams::LineSelectorEnums LineSelectorEnums;
+    typedef Basler_GigECameraParams::LineSourceEnums LineSourceEnums;
+    typedef Basler_GigECameraParams::LineModeEnums LineModeEnums;
     typedef GenApi::IInteger AutoTargetBrightnessType;
     typedef GenApi::IInteger GainType;
     typedef int64_t AutoTargetBrightnessValueType;

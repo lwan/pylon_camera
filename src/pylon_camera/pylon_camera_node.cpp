@@ -380,6 +380,8 @@ pylon_camera::CameraSettingsConfig PylonCameraNode::setParams(pylon_camera::Came
         pylon_camera_->setBalanceWhiteAuto( pylon_camera_parameter_set_.whitebalance_auto_ );
     }
 
+    
+
     ROS_INFO_STREAM("Loaded settings: "
             << "encoding = '" << pylon_camera_->currentROSEncoding() << "', "
             << "binning = [" << pylon_camera_->currentBinningX() << ", "

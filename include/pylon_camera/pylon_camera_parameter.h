@@ -268,6 +268,8 @@ public:
      */
     bool has_intrinsic_calib_;
 
+    
+
 protected:
     /**
      * Validates the parameter set found on the ros parameter server.

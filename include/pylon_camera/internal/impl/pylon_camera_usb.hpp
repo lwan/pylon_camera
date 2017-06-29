@@ -47,6 +47,11 @@ struct USBCameraTrait
     typedef Basler_UsbCameraParams::GainAutoEnums GainAutoEnums;
     typedef Basler_UsbCameraParams::PixelFormatEnums PixelFormatEnums;
     typedef Basler_UsbCameraParams::PixelSizeEnums PixelSizeEnums;
+    typedef Basler_UsbCameraParams::TriggerModeEnums TriggerModeEnums;
+    typedef Basler_UsbCameraParams::TriggerSourceEnums TriggerSourceEnums;
+    typedef Basler_UsbCameraParams::LineSelectorEnums LineSelectorEnums;
+    typedef Basler_UsbCameraParams::LineSourceEnums LineSourceEnums;
+    typedef Basler_UsbCameraParams::LineModeEnums LineModeEnums;
     typedef GenApi::IFloat AutoTargetBrightnessType;
     typedef GenApi::IFloat GainType;
     typedef double AutoTargetBrightnessValueType;

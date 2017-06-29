@@ -205,6 +205,63 @@ bool PylonCameraImpl<CameraTraitT>::isBrightnessSearchRunning()
 }
 
 template <typename CameraTraitT>
+void PylonCameraImpl<CameraTraitT>::setTriggerMode(std::string mode)
+{
+    if ( mode == "On")
+    {
+        cam_->TriggerMode.SetValue(TriggerModeEnums::TriggerMode_On);
+    }
+    else
+    {
+        cam_->TriggerMode.SetValue(TriggerModeEnums::TriggerMode_Off);
+    }
+}
+
+template <typename CameraTraitT>
+void PylonCameraImpl<CameraTraitT>::setTriggerSource(std::string source)
+{
+    // hardcoding for now until Jon tells me what I should do. 
+    cam_->TriggerSource.SetValue(TriggerSourceEnums::TriggerSource_Line2);
+}
+
+template <typename CameraTraitT>
+void PylonCameraImpl<CameraTraitT>::setLineSelector(std::string line)
+{
+    if ( line == "Line1")
+    {
+        cam_->LineSelector.SetValue(LineSelectorEnums::LineSelector_Line1);
+    }
+    else if ( line == "Line2")
+    {
+        cam_->LineSelector.SetValue(LineSelectorEnums::LineSelector_Line2);        
+    }
+}
+
+template <typename CameraTraitT>
+void PylonCameraImpl<CameraTraitT>::setLineSource(std::string source)
+{
+    if ( source == "ExposureActive")
+    {
+        cam_->LineSource.SetValue(LineSourceEnums::LineSource_ExposureActive);
+    }
+}
+
+template <typename CameraTraitT>
+void PylonCameraImpl<CameraTraitT>::setLineMode(std::string mode)
+{
+    if ( mode == "Input")
+    {
+        cam_->LineMode.SetValue(LineModeEnums::LineMode_Input);
+    }
+    else if (mode == "Output")
+    {
+        cam_->LineMode.SetValue(LineModeEnums::LineMode_Output);
+    }
+}
+
+
+
+template <typename CameraTraitT>
 void PylonCameraImpl<CameraTraitT>::enableContinuousAutoExposure()
 {
     if ( GenApi::IsAvailable(cam_->ExposureAuto) )
