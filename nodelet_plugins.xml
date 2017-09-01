@@ -1,0 +1,9 @@
+<library path="lib/libpylon_camera">
+  <class name="pylon_camera/PylonCameraNodelet"
+         type="pylon_camera::PylonCameraNodelet"
+         base_class_type="nodelet::Nodelet">
+    <description>
+      description
+    </description>
+  </class>
+</library>

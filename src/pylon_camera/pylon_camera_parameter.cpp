@@ -36,7 +36,7 @@ namespace pylon_camera
 PylonCameraParameter::PylonCameraParameter() :
         camera_frame_("pylon_camera"),
         device_user_id_(""),
-        frame_rate_(5.0),
+        frame_rate_(30.0),
         camera_info_url_(""),
         image_encoding_(""),
         binning_x_(1),
@@ -44,26 +44,11 @@ PylonCameraParameter::PylonCameraParameter() :
         binning_x_given_(false),
         binning_y_given_(false),
         downsampling_factor_exp_search_(1),
-        // ##########################
-        //  image intensity settings
-        // ##########################
-        exposure_(10000.0),
-        exposure_given_(false),
-        gain_(0.5),
-        gain_given_(false),
-        gamma_(1.0),
-        gamma_given_(false),
-        brightness_(100),
-        brightness_given_(false),
-        brightness_continuous_(false),
-        exposure_auto_(true),
-        gain_auto_(true),
-        // #########################
         exposure_search_timeout_(5.),
         auto_exp_upper_lim_(0.0),
-        mtu_size_(3000),
+        mtu_size_(1500),
         inter_pkg_delay_(1000),
-        shutter_mode_(SM_DEFAULT)
+        shutter_mode_(SM_GLOBAL)
 {}
 
 PylonCameraParameter::~PylonCameraParameter()
@@ -71,6 +56,8 @@ PylonCameraParameter::~PylonCameraParameter()
 
 void PylonCameraParameter::readFromRosParameterServer(const ros::NodeHandle& nh)
 {
+    ROS_INFO_STREAM("Reading parameters from parameter server"); 
+
     nh.param<std::string>("camera_frame", camera_frame_, "pylon_camera");
 
     nh.param<std::string>("device_user_id", device_user_id_, "");
@@ -85,6 +72,13 @@ void PylonCameraParameter::readFromRosParameterServer(const ros::NodeHandle& nh)
     {
         nh.getParam("camera_info_url", camera_info_url_);
     }
+
+    nh.param<std::string>("camera_serial", camera_serial_, "");
+    if ( nh.hasParam("camera_serial") )
+    {
+        nh.getParam("camera_serial", camera_serial_);
+    }
+
 
     binning_x_given_ = nh.hasParam("binning_x");
     if ( binning_x_given_ )
@@ -204,6 +198,16 @@ void PylonCameraParameter::readFromRosParameterServer(const ros::NodeHandle& nh)
             }
         }
     }
+
+
+    
+    if ( nh.hasParam("whitebalance_auto") )
+    {
+        nh.getParam("whitebalance_auto", whitebalance_auto_);
+        ROS_INFO_STREAM("Continuous auto white balance set");
+    }
+    
+
     // ##########################
 
     nh.param<double>("exposure_search_timeout", exposure_search_timeout_, 5.);
@@ -215,7 +219,7 @@ void PylonCameraParameter::readFromRosParameterServer(const ros::NodeHandle& nh)
     }
 
     if ( nh.hasParam("gige/inter_pkg_delay") )
-    {
+    { 
         nh.getParam("gige/inter_pkg_delay", inter_pkg_delay_);
     }
 
@@ -297,6 +301,11 @@ void PylonCameraParameter::validateParameterSet(const ros::NodeHandle& nh)
 const std::string& PylonCameraParameter::deviceUserID() const
 {
     return device_user_id_;
+}
+
+const std::string& PylonCameraParameter::cameraSerial() const
+{
+    return camera_serial_;
 }
 
 std::string PylonCameraParameter::shutterModeString() const

@@ -125,7 +125,7 @@ PylonCamera* createFromDevice(PYLON_CAM_TYPE cam_type, Pylon::IPylonDevice* devi
     }
 }
 
-PylonCamera* PylonCamera::create(const std::string& device_user_id_to_open)
+PylonCamera* PylonCamera::create(const std::string& camera_serial_to_open)
 {
     try
     {
@@ -145,25 +145,33 @@ PylonCamera* PylonCamera::create(const std::string& device_user_id_to_open)
         else
         {
             Pylon::DeviceInfoList_t::const_iterator it;
-            if ( device_user_id_to_open.empty() )
+            if ( camera_serial_to_open.empty() )
             {
-                ROS_INFO_STREAM("Found camera with DeviceUserID "
-                            << device_list.front().GetUserDefinedName() << ": "
+                ROS_INFO_STREAM("Found camera with Camera Serial:"
+                            << device_list.front().GetSerialNumber() << ": "
                             << device_list.front().GetModelName());
                 PYLON_CAM_TYPE cam_type = detectPylonCamType(device_list.front());
+                
+                
+                ROS_INFO_STREAM("All detected devices:");
+                for ( it = device_list.begin(); it != device_list.end(); ++it )
+                {
+                    ROS_INFO_STREAM(it->GetSerialNumber());
+                }
+
                 return createFromDevice(cam_type,
                                         tl_factory.CreateDevice(device_list.front()));
             }
             bool found_desired_device = false;
             for ( it = device_list.begin(); it != device_list.end(); ++it )
             {
-                std::string device_user_id_found(it->GetUserDefinedName());
-                if ( (0 == device_user_id_to_open.compare(device_user_id_found)) ||
-                     (device_user_id_to_open.length() < device_user_id_found.length() &&
-                     (0 == device_user_id_found.compare(device_user_id_found.length() -
-                                                         device_user_id_to_open.length(),
-                                                         device_user_id_to_open.length(),
-                                                         device_user_id_to_open) )
+                std::string camera_serial_found(it->GetSerialNumber());
+                if ( (0 == camera_serial_to_open.compare(camera_serial_found)) ||
+                     (camera_serial_to_open.length() < camera_serial_found.length() &&
+                     (0 == camera_serial_found.compare(camera_serial_found.length() -
+                                                         camera_serial_to_open.length(),
+                                                         camera_serial_to_open.length(),
+                                                         camera_serial_to_open) )
                      )
                    )
                 {
@@ -173,8 +181,8 @@ PylonCamera* PylonCamera::create(const std::string& device_user_id_to_open)
             }
             if ( found_desired_device )
             {
-                ROS_INFO_STREAM("Found the desired camera with DeviceUserID "
-                            << device_user_id_to_open << ": "
+                ROS_INFO_STREAM("Found the desired camera with serial "
+                            << camera_serial_to_open << ": "
                             << it->GetModelName());
                 PYLON_CAM_TYPE cam_type = detectPylonCamType(*it);
                 return createFromDevice(cam_type,
@@ -183,9 +191,7 @@ PylonCamera* PylonCamera::create(const std::string& device_user_id_to_open)
             else
             {
                 ROS_ERROR_STREAM("Couldn't find the camera, that matches the "
-                    << "given DeviceUserID: " << device_user_id_to_open << "!\r\n"
-                    << "Maybe it's wrong or has not yet been written to the "
-                    << "camera?!");
+                    << "given serial: " << camera_serial_to_open);
                 return nullptr;
             }
         }
@@ -193,7 +199,7 @@ PylonCamera* PylonCamera::create(const std::string& device_user_id_to_open)
     catch ( GenICam::GenericException &e )
     {
         ROS_ERROR_STREAM("An exception while opening the desired camera with "
-            << "DeviceUserID: " << device_user_id_to_open << " occurred: \r\n"
+            << "Serial: " << camera_serial_to_open << " occurred: \r\n"
             << e.GetDescription());
         return nullptr;
     }

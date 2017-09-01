@@ -15,20 +15,27 @@ set(
      roscpp
      roslaunch
      sensor_msgs
-     #std_srvs
+     nodelet
+     dynamic_reconfigure
+     roslint
 )
 
 find_package(Pylon QUIET)
 if (NOT ${Pylon_FOUND})
     include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindPylon.cmake")
 endif()
+
 find_package(
     catkin REQUIRED
     COMPONENTS
      ${CATKIN_COMPONENTS}
-     #std_srvs
-     roslint
 )
+
+catkin_python_setup()
+generate_dynamic_reconfigure_options(
+  cfg/CameraSettings.cfg
+)
+
 
 catkin_package(
     INCLUDE_DIRS
@@ -49,6 +56,7 @@ roslint_cpp(
     src/${PROJECT_NAME}/encoding_conversions.cpp
     src/${PROJECT_NAME}/main.cpp
     src/${PROJECT_NAME}/pylon_camera_node.cpp
+    src/${PROJECT_NAME}/pylon_camera_nodelet.cpp
     src/${PROJECT_NAME}/pylon_camera_parameter.cpp
     src/${PROJECT_NAME}/pylon_camera.cpp
     src/${PROJECT_NAME}/write_device_user_id_to_camera.cpp
@@ -79,6 +87,7 @@ add_library(
      src/${PROJECT_NAME}/encoding_conversions.cpp
      src/${PROJECT_NAME}/pylon_camera.cpp
      src/${PROJECT_NAME}/pylon_camera_node.cpp
+     src/${PROJECT_NAME}/pylon_camera_nodelet.cpp
      src/${PROJECT_NAME}/pylon_camera_parameter.cpp
 )
 
@@ -120,7 +129,10 @@ add_dependencies(
      ${catkin_EXPORTED_TARGETS}
 )
 
-catkin_python_setup()
+add_dependencies(
+    ${PROJECT_NAME}_node
+    ${PROJECT_NAME}_gencfg 
+)
 
 install(
     DIRECTORY
@@ -168,6 +180,13 @@ install(
     FILES_MATCHING PATTERN
      "*.h"
     PATTERN "internal" EXCLUDE
+)
+
+install(
+    FILES
+      nodelet_plugins.xml
+    DESTINATION
+      ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
 
 ## Testing ##

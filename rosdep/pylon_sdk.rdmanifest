@@ -13,7 +13,7 @@ install-script: |
   fi
 
   arch="$(uname -m)"
-  version="5.0.1.6388"
+  version="5016388"
   if [ "$arch" == "armv7l" ]; then
     pkgarch="armhf"
   elif [ "$arch" == "x86_64" ]; then
@@ -22,14 +22,14 @@ install-script: |
     pkgarch="x86"
   fi
 
-  pkg=pylon-${version}-${pkgarch}.tar.gz
-  url="http://s.baslerweb.com/media/documents/${pkg}"
+  pkg=pylon-${version}-${pkgarch}tar.gz
+  url="https://www.baslerweb.com/media/downloads/software/pylon_software/${pkg}"
 
   wget --no-check-certificate -O $pkg $url
   tar xzvf $pkg
-  cd pylon-${version}-${pkgarch}
+  cd pylon-*
   mkdir -p untarred
-  tar xzvf pylonSDK-${version}-${pkgarch}.tar.gz -C untarred
+  tar xzvf pylonSDK-*.tar.gz -C untarred
 
   if [ "${PYLON_ROOT}" = "" ]; then
     sudo mv untarred/pylon5 /opt

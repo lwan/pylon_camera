@@ -40,17 +40,13 @@
 #include <image_transport/image_transport.h>
 #include <sensor_msgs/CameraInfo.h>
 #include <sensor_msgs/image_encodings.h>
+#include <dynamic_reconfigure/server.h>
 
 #include <pylon_camera/pylon_camera_parameter.h>
 #include <pylon_camera/pylon_camera.h>
+#include <pylon_camera/CameraSettingsConfig.h>
 
 #include <camera_control_msgs/SetBool.h>
-#include <camera_control_msgs/SetBinning.h>
-#include <camera_control_msgs/SetBrightness.h>
-#include <camera_control_msgs/SetExposure.h>
-#include <camera_control_msgs/SetGain.h>
-#include <camera_control_msgs/SetGamma.h>
-#include <camera_control_msgs/SetSleeping.h>
 #include <camera_control_msgs/GrabImagesAction.h>
 
 namespace pylon_camera
@@ -64,7 +60,7 @@ typedef actionlib::SimpleActionServer<camera_control_msgs::GrabImagesAction> Gra
 class PylonCameraNode
 {
 public:
-    PylonCameraNode();
+    PylonCameraNode(ros::NodeHandle &nh_private, ros::NodeHandle &nh_image);
     virtual ~PylonCameraNode();
 
     /**
@@ -74,9 +70,9 @@ public:
     void init();
 
     /**
-     * spin the node
+     * spin the node (with timer callback)
      */
-    virtual void spin();
+    virtual void spinCallback(const ros::TimerEvent& event);
 
     /**
      * Getter for the frame rate set by the launch script or from the ros parameter
@@ -91,6 +87,13 @@ public:
      */
     const std::string& cameraFrame() const;
 
+    /**
+    * Callback for dynamic reconfigure parameters
+    */
+    void reconfigureCallback(pylon_camera::CameraSettingsConfig &config, 
+                            uint32_t level);
+
+
 protected:
     /**
      * Creates the camera instance and starts the services and action servers.
@@ -103,6 +106,23 @@ protected:
      * @return
      */
     bool startGrabbing();
+
+    /**
+    * Initialize camera, set initial parameters
+    *
+    */
+    bool initGrabbing();
+
+    /**
+    * Set parameters
+    */
+    pylon_camera::CameraSettingsConfig setParams(pylon_camera::CameraSettingsConfig config);
+
+    /**
+    * Conversion between dynamic recnfigure parameters and PylonCameraParameter class
+    */
+    void convertConfigParams(pylon_camera::CameraSettingsConfig &config);
+
 
     /**
      * Initializing of img_rect_pub_, grab_img_rect_as_ and the pinhole_model_,
@@ -158,29 +178,12 @@ protected:
                      size_t& reached_binning_y);
 
     /**
-     * Service callback for updating the cameras binning setting
-     * @param req request
-     * @param res response
-     * @return true on success
-     */
-    bool setBinningCallback(camera_control_msgs::SetBinning::Request &req,
-                            camera_control_msgs::SetBinning::Response &res);
-    /**
      * Update the exposure value on the camera
      * @param target_exposure the targeted exposure
      * @param reached_exposure the exposure that could be reached
      * @return true if the targeted exposure could be reached
      */
     bool setExposure(const float& target_exposure, float& reached_exposure);
-
-    /**
-     * Service callback for setting the exposure
-     * @param req request
-     * @param res response
-     * @return true on success
-     */
-    bool setExposureCallback(camera_control_msgs::SetExposure::Request &req,
-                             camera_control_msgs::SetExposure::Response &res);
 
     /**
      * Sets the target brightness which is the intensity-mean over all pixels.
@@ -202,15 +205,6 @@ protected:
                        const bool& gain_auto);
 
     /**
-     * Service callback for setting the brightness
-     * @param req request
-     * @param res response
-     * @return true on success
-     */
-    bool setBrightnessCallback(camera_control_msgs::SetBrightness::Request &req,
-                               camera_control_msgs::SetBrightness::Response &res);
-
-    /**
      * Update the gain from the camera to a target gain in percent
      * @param target_gain the targeted gain in percent
      * @param reached_gain the gain that could be reached
@@ -219,39 +213,12 @@ protected:
     bool setGain(const float& target_gain, float& reached_gain);
 
     /**
-     * Service callback for setting the desired gain in percent
-     * @param req request
-     * @param res response
-     * @return true on success
-     */
-    bool setGainCallback(camera_control_msgs::SetGain::Request &req,
-                         camera_control_msgs::SetGain::Response &res);
-
-    /**
      * Update the gamma from the camera to a target gamma correction value
      * @param target_gamma the targeted gamma
      * @param reached_gamma the gamma that could be reached
      * @return true if the targeted gamma could be reached
      */
     bool setGamma(const float& target_gamma, float& reached_gamma);
-
-    /**
-     * Service callback for setting the desired gamma correction value
-     * @param req request
-     * @param res response
-     * @return true on success
-     */
-    bool setGammaCallback(camera_control_msgs::SetGamma::Request &req,
-                         camera_control_msgs::SetGamma::Response &res);
-
-    /**
-     * Callback that puts the camera to sleep
-     * @param req request
-     * @param res response
-     * @return true on success
-     */
-    bool setSleepingCallback(camera_control_msgs::SetSleeping::Request &req,
-                             camera_control_msgs::SetSleeping::Response &res);
 
     /**
      * Returns true if the camera was put into sleep mode
@@ -317,14 +284,17 @@ protected:
      */
     bool waitForCamera(const ros::Duration& timeout) const;
 
-    ros::NodeHandle nh_;
+
+    ros::NodeHandle* nh_private_;
+    ros::NodeHandle* nh_image_;
+    ros::Timer grab_image_timer_;
+    
+    
     PylonCameraParameter pylon_camera_parameter_set_;
-    ros::ServiceServer set_binning_srv_;
-    ros::ServiceServer set_exposure_srv_;
-    ros::ServiceServer set_gain_srv_;
-    ros::ServiceServer set_gamma_srv_;
-    ros::ServiceServer set_brightness_srv_;
-    ros::ServiceServer set_sleeping_srv_;
+    pylon_camera::CameraSettingsConfig config_;
+
+    dynamic_reconfigure::Server<pylon_camera::CameraSettingsConfig> cam_settings_server;
+
     std::vector<ros::ServiceServer> set_user_output_srvs_;
 
     PylonCamera* pylon_camera_;
@@ -348,6 +318,8 @@ protected:
 
     bool is_sleeping_;
     boost::recursive_mutex grab_mutex_;
+
+    bool camera_initialized_;
 };
 
 }  // namespace pylon_camera

@@ -56,8 +56,8 @@ public:
     static PylonCamera* create();
 
     /**
-     * Create a new PylonCamera instance based on the DeviceUserID of the camera.
-     * @param device_user_id Pylon DeviceUserID. If the string is empty, the
+     * Create a new PylonCamera instance based on the serial number of the camera.
+     * @param camera_serial Pylon cameraSerial. If the string is empty, the
      * first camera that could be found is returned.
      * @return new PylonCamera instance or NULL if the camera was not found.
      */
@@ -321,6 +321,13 @@ public:
      * Enables the continuous auto gain mode
      */
     virtual void enableContinuousAutoGain() = 0;
+
+
+    /**
+    * Enables continuous auto white balance mode
+    */
+    virtual bool setBalanceWhiteAuto( bool balance_white_enable ) = 0;
+
 
     /**
      * Get the camera type. Currently supported cameras are USB, DART and GigE

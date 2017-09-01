@@ -26,6 +26,8 @@ This means that the image acquisition is triggered with a certain rate and the c
 
 The package opens either a predefined camera (using a given 'device_user_id' parameter) or, if no camera id is predefined the first camera device it can find.
 
+The package supports running as nodelet.
+
 |
 
 ******
@@ -126,6 +128,14 @@ The pylon_camera_node can be started over the launch file which includes a confi
 Images were only published if another node connects to the image topic. The published images can be seen using the image_view node from the image_pipeline stack:
 
 ``rosrun image_view image_view image:=/pylon_camera_node/image_raw``
+
+The pylon_camera package also supports running as nodelet. To run as nodelet, use following launch file
+
+``roslaunch pylon_camera pylon_camera_nodelet.launch``
+
+The image topic can be viewed using image_view using
+
+``rosrun image_view image_view image:=/pylon_camera_nodelet/image_raw``
 
 ******
 **Questions**

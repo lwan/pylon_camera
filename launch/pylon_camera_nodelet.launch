@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<launch>
+
+    <arg name="node_name" default="pylon_camera_node" />
+    <arg name="config_file" default="$(find pylon_camera)/config/default.yaml" />
+
+    <node pkg="nodelet" type="nodelet" name="pylon_camera_manager" args="manager" output="screen" />
+    <node pkg="nodelet" type="nodelet" name="pylon_camera_nodelet" args="load pylon_camera/PylonCameraNodelet pylon_camera_manager" output="screen">
+        <param name="camera_frame" value="$(arg node_name)" type="string" />
+        <rosparam command="load" file="$(arg config_file)" />
+    </node>
+
+</launch>
